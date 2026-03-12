@@ -242,6 +242,7 @@ export type EntregaRelatorio = {
   setor: string;
   epi_nome: string;
   categoria: string;
+  numero_ca: string;
   lote: string;
   quantidade: number;
   data_entrega: string;
@@ -396,6 +397,7 @@ export const registrarEntrega = (payload: EntregaInput) =>
 export const listarEntregasRelatorio = async (params?: {
   setor?: string;
   categoria?: string;
+  numero_ca?: string;  
   data_de?: string;
   data_ate?: string;
   funcionario_id?: number;
@@ -422,6 +424,7 @@ export const exportarEntregasRelatorio = async (params?: {
   setor?: string;
   categoria?: string;
   data_de?: string;
+  numero_ca?: string;
   data_ate?: string;
   funcionario_id?: number;
   epi_id?: number;

@@ -92,6 +92,18 @@ const formatDate = (value?: string | null) => {
   return `${d}/${m}/${y}`;
 };
 
+const protocoloRelatorio = (item: EntregaRelatorio, index: number) => {
+  if (item.protocolo) return item.protocolo;
+
+  const funcionario = funcionarios.find((f) => f.nome === item.funcionario_nome);
+
+  return gerarProtocoloEntrega({
+    dataEntrega: item.data_entrega,
+    funcionarioId: funcionario?.id || 0,
+    ordemEntrega: index + 1,
+  });
+};
+
 const getEntregaStatus = (validade?: string | null) => {
   if (!validade) return { label: 'Ativo', status: 'success' as const };
 
@@ -593,10 +605,10 @@ const RelatoriosPage = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {relatorioFiltrado.map((e) => (
+                      {relatorioFiltrado.map((e, index) => (
                         <TableRow key={e.id}>
-                          <TableCell sx={{ fontWeight: 700, fontSize: '0.78rem', color: '#0B5ED7' }}>
-                            {e.protocolo || '—'}
+                         <TableCell sx={{ fontWeight: 700, fontSize: '0.78rem', color: '#0B5ED7' }}>
+                            {protocoloRelatorio(e, index)}
                           </TableCell>
                           <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{e.funcionario_nome}</TableCell>
                           <TableCell>{e.setor}</TableCell>

@@ -124,6 +124,26 @@ const downloadBlob = (blob: Blob, fileName: string) => {
   window.URL.revokeObjectURL(url);
 };
 
+const normalizeEntregaRelatorio = (item: any): EntregaRelatorio => ({
+  id: Number(item?.id ?? 0),
+  funcionario_nome: item?.funcionario_nome ?? item?.funcionario?.nome ?? '',
+  setor: item?.setor ?? item?.funcionario?.setor ?? '',
+  epi_nome: item?.epi_nome ?? item?.epi?.nome ?? '',
+  categoria: item?.categoria ?? item?.epi?.categoria ?? '',
+  numero_ca:
+    String(
+      item?.numero_ca ??
+        item?.epi_numero_ca ??
+        item?.epi?.numero_ca ??
+        ''
+    ).trim(),
+  lote: item?.lote ?? '',
+  quantidade: Number(item?.quantidade ?? 0),
+  data_entrega: item?.data_entrega ?? '',
+  validade_ate: item?.validade_ate ?? null,
+  protocolo: item?.protocolo ?? null,
+});
+
 const buildExcelXml = (rows: EntregaRelatorio[]) => {
   const header = [
     'Protocolo',
@@ -210,7 +230,6 @@ const buildPdfHtml = (
         justify-content: center;
         overflow: hidden;
       }
-
       .logo-img {
         max-width: 100%;
         max-height: 100%;
@@ -220,11 +239,6 @@ const buildPdfHtml = (
         margin: 0;
         font-size: 24px;
         color: #0B5ED7;
-      }
-      .brand-subtitle {
-        margin-top: 4px;
-        font-size: 12px;
-        color: #4b5563;
       }
       .header {
         border: 1px solid #d7dce3;
@@ -411,7 +425,9 @@ const RelatoriosPage = () => {
         api.listarFuncionarios(),
       ]);
 
-      setRelatorio(relatorioResp ?? []);
+      const relatorioNormalizado = (relatorioResp ?? []).map(normalizeEntregaRelatorio);
+
+      setRelatorio(relatorioNormalizado);
       setEpis(episResp ?? []);
       setLotes(lotesResp ?? []);
       setFuncionarios(funcionariosResp ?? []);
@@ -520,7 +536,6 @@ const RelatoriosPage = () => {
   const handleExportExcel = async () => {
     try {
       setExportando(true);
-
       const xml = buildExcelXml(relatorioFiltrado);
       const blob = new Blob([xml], {
         type: 'application/vnd.ms-excel;charset=utf-8;',

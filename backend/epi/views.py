@@ -1,12 +1,13 @@
-from datetime import date, timedelta, datetime  # ✅ unificado
+from datetime import date, timedelta, datetime
 from django.db import transaction
 from django.http import HttpResponse
 from django.db.models import Sum, F
+from django.contrib.auth import authenticate
 
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, decorators, response, status
-from rest_framework.viewsets import ModelViewSet  # ✅
-from rest_framework.permissions import IsAuthenticated, IsAdminUser  # ✅
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.decorators import action
 
 from .models import EPI, EstoqueEPI, Funcionario, MatrizFuncaoEPI, EntregaEPI, TrocaEPI, Usuario
@@ -29,7 +30,7 @@ class EPIViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"])
     def lotes(self, request, pk=None):
         qs = EstoqueEPI.objects.filter(epi_id=pk, quantidade__gt=0).values(
-            "id","lote","quantidade","nf_numero","data_compra"
+            "id", "lote", "quantidade", "nf_numero", "data_compra"
         )
         return response.Response(list(qs))
 
@@ -53,7 +54,49 @@ class FuncionarioViewSet(viewsets.ModelViewSet):
     serializer_class = FuncionarioSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-# ❌ Removido: função @action relatorio solta (quebrava import)
+    @action(detail=True, methods=["post"], url_path="excluir-com-senha")
+    def excluir_com_senha(self, request, pk=None):
+        funcionario = self.get_object()
+        admin_password = request.data.get("admin_password", "")
+
+        if not admin_password:
+            return Response(
+                {"detail": "Informe a senha do administrador."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+
+        # Só admin pode excluir
+        is_admin = getattr(user, "perfil", None) == "admin" or user.is_superuser or user.is_staff
+        if not is_admin:
+            return Response(
+                {"detail": "Apenas administradores podem excluir funcionários."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Confirma a senha do admin logado
+        auth_user = authenticate(username=user.username, password=admin_password)
+        if not auth_user:
+            return Response(
+                {"detail": "Senha do administrador incorreta."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Segurança: não excluir se existir histórico de entregas
+        if funcionario.entregas.exists():
+            return Response(
+                {"detail": "Este funcionário possui histórico de entregas e não pode ser excluído."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        nome = funcionario.nome
+        funcionario.delete()
+
+        return Response(
+            {"detail": f'Funcionário "{nome}" excluído com sucesso.'},
+            status=status.HTTP_200_OK
+        )
 
 class MatrizFuncaoEPIViewSet(viewsets.ModelViewSet):
     queryset = MatrizFuncaoEPI.objects.all()
@@ -171,8 +214,8 @@ class EntregaEPIViewSet(viewsets.ModelViewSet):
         ws.title = "Entregas EPI"
 
         headers = [
-            "Funcionário","Setor","EPI","Categoria","Lote",
-            "Quantidade","Data Entrega","Validade Até",
+            "Funcionário", "Setor", "EPI", "Categoria", "Lote",
+            "Quantidade", "Data Entrega", "Validade Até",
         ]
         ws.append(headers)
 
@@ -233,8 +276,8 @@ def kpis(request):
         .order_by("-total")[:10]
     )
     proximos_vencimentos = (
-        EntregaEPI.objects.filter(data_validade_prevista__lte=date.today()+timedelta(days=30))
-        .values("funcionario__nome","epi__nome","data_validade_prevista")
+        EntregaEPI.objects.filter(data_validade_prevista__lte=date.today() + timedelta(days=30))
+        .values("funcionario__nome", "epi__nome", "data_validade_prevista")
         .order_by("data_validade_prevista")[:20]
     )
     return response.Response({

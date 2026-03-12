@@ -1,38 +1,40 @@
-from django.db import models, transaction
+from django.db import models
+from django.utils import timezone
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractUser, Group, Permission
+
 
 class Usuario(AbstractUser):
     nome = models.CharField(max_length=150)
     perfil = models.CharField(
         max_length=20,
-        choices=[('admin','Administrador'),('gestor','Gestor'),('colaborador','Colaborador')]
+        choices=[("admin", "Administrador"), ("gestor", "Gestor"), ("colaborador", "Colaborador")],
     )
 
-    # 🔧 Sobrescreve os M2M para evitar choque com auth.User
     groups = models.ManyToManyField(
         Group,
-        verbose_name='groups',
+        verbose_name="groups",
         blank=True,
-        related_name='epi_users',              # <= evita o 'user_set' padrão
-        related_query_name='epi_user',
+        related_name="epi_users",
+        related_query_name="epi_user",
         help_text=(
-            'The groups this user belongs to. A user will get all permissions '
-            'granted to each of their groups.'
+            "The groups this user belongs to. A user will get all permissions "
+            "granted to each of their groups."
         ),
     )
     user_permissions = models.ManyToManyField(
         Permission,
-        verbose_name='user permissions',
+        verbose_name="user permissions",
         blank=True,
-        related_name='epi_users_permissions',  # <= evita o 'user_set' padrão
-        related_query_name='epi_user',
-        help_text='Specific permissions for this user.',
+        related_name="epi_users_permissions",
+        related_query_name="epi_user",
+        help_text="Specific permissions for this user.",
     )
 
     def __str__(self):
         return self.nome or self.username
+
 
 class EPI(models.Model):
     CATEGORIAS = [
@@ -45,6 +47,7 @@ class EPI(models.Model):
         ("corpo", "Corpo"),
         ("outros", "Outros"),
     ]
+
     nome = models.CharField(max_length=120)
     categoria = models.CharField(max_length=20, choices=CATEGORIAS, default="outros")
     tempo_validade_dias = models.PositiveIntegerField(default=180)
@@ -57,8 +60,10 @@ class EPI(models.Model):
     observacoes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
         return self.nome
+
 
 class EstoqueEPI(models.Model):
     epi = models.ForeignKey(EPI, on_delete=models.CASCADE, related_name="estoques")
@@ -86,8 +91,10 @@ class EstoqueEPI(models.Model):
         self.quantidade -= quantidade
         self.save(update_fields=["quantidade"])
 
+
 class Funcionario(models.Model):
-    STATUS = [("ativo","Ativo"), ("inativo","Inativo")]
+    STATUS = [("ativo", "Ativo"), ("inativo", "Inativo")]
+
     nome = models.CharField(max_length=140)
     cpf = models.CharField(max_length=14, unique=True)
     data_nascimento = models.DateField(null=True, blank=True)
@@ -106,8 +113,10 @@ class Funcionario(models.Model):
     status = models.CharField(max_length=10, choices=STATUS, default="ativo")
     biometria_template_hash = models.CharField(max_length=256, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
     def __str__(self):
         return f"{self.nome} ({self.cpf})"
+
 
 class MatrizFuncaoEPI(models.Model):
     funcao = models.CharField(max_length=100)
@@ -116,8 +125,10 @@ class MatrizFuncaoEPI(models.Model):
     epi = models.ForeignKey(EPI, on_delete=models.CASCADE)
     quantidade_padrao = models.PositiveIntegerField(default=1)
     obrigatorio = models.BooleanField(default=True)
+
     class Meta:
         indexes = [models.Index(fields=["funcao", "setor", "cbo"])]
+
 
 class EntregaEPI(models.Model):
     funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, related_name="entregas")
@@ -131,21 +142,55 @@ class EntregaEPI(models.Model):
     ip = models.GenericIPAddressField(null=True, blank=True)
     geo = models.CharField(max_length=120, blank=True)
     responsavel = models.ForeignKey(
-        settings.AUTH_USER_MODEL,  # ✅ mais seguro p/ custom user
-        on_delete=models.SET_NULL, null=True, blank=True
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     termo_pdf_id = models.CharField(max_length=120, blank=True)
     hash_termo = models.CharField(max_length=120, blank=True)
+    protocolo = models.CharField(max_length=20, unique=True, blank=True, null=True)
+
+    class Meta:
+        ordering = ["-data_entrega", "-id"]
+
+    def montar_protocolo(self):
+        data_base = self.data_entrega or timezone.localtime()
+        ano = str(data_base.year)[-2:]
+        dia = f"{data_base.day:02d}"
+        funcionario_id = f"{self.funcionario_id:04d}"
+        ordem = f"{self.id:04d}"
+        return f"{ano}-{dia}-{funcionario_id}-{ordem}"
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        if is_new and not self.protocolo:
+            protocolo = self.montar_protocolo()
+            EntregaEPI.objects.filter(pk=self.pk).update(protocolo=protocolo)
+            self.protocolo = protocolo
+
+    def __str__(self):
+        return f"{self.protocolo or 'Sem protocolo'} - {self.funcionario.nome}"
+
 
 class TrocaEPI(models.Model):
-    MOTIVOS = [("vencimento","Vencimento"), ("dano","Dano"), ("perda","Perda"),
-               ("extravio","Extravio"), ("ajuste","Ajuste de tamanho")]
+    MOTIVOS = [
+        ("vencimento", "Vencimento"),
+        ("dano", "Dano"),
+        ("perda", "Perda"),
+        ("extravio", "Extravio"),
+        ("ajuste", "Ajuste de tamanho"),
+    ]
+
     entrega = models.ForeignKey(EntregaEPI, on_delete=models.CASCADE, related_name="trocas")
     motivo = models.CharField(max_length=20, choices=MOTIVOS)
     aprovado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     data_solicitacao = models.DateTimeField(auto_now_add=True)
     data_aprovacao = models.DateTimeField(null=True, blank=True)
     nova_entrega = models.ForeignKey(EntregaEPI, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
 
 class AuditLog(models.Model):
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)

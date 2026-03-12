@@ -92,18 +92,6 @@ const formatDate = (value?: string | null) => {
   return `${d}/${m}/${y}`;
 };
 
-const protocoloRelatorio = (item: EntregaRelatorio, index: number) => {
-  if (item.protocolo) return item.protocolo;
-
-  const funcionario = funcionarios.find((f) => f.nome === item.funcionario_nome);
-
-  return gerarProtocoloEntrega({
-    dataEntrega: item.data_entrega,
-    funcionarioId: funcionario?.id || 0,
-    ordemEntrega: index + 1,
-  });
-};
-
 const getEntregaStatus = (validade?: string | null) => {
   if (!validade) return { label: 'Ativo', status: 'success' as const };
 
@@ -159,6 +147,7 @@ const buildExcelXml = (rows: EntregaRelatorio[]) => {
           <Cell><Data ss:Type="String">${escapeHtml(r.setor || '')}</Data></Cell>
           <Cell><Data ss:Type="String">${escapeHtml(r.epi_nome || '')}</Data></Cell>
           <Cell><Data ss:Type="String">${escapeHtml(r.categoria || '')}</Data></Cell>
+          <Cell><Data ss:Type="String">${escapeHtml(r.numero_ca || '')}</Data></Cell>
           <Cell><Data ss:Type="String">${escapeHtml(r.lote || '')}</Data></Cell>
           <Cell><Data ss:Type="Number">${Number(r.quantidade || 0)}</Data></Cell>
           <Cell><Data ss:Type="String">${escapeHtml(formatDate(r.data_entrega))}</Data></Cell>
@@ -351,6 +340,7 @@ const buildPdfHtml = (
                   <td>${escapeHtml(r.protocolo || '')}</td>
                   <td>${escapeHtml(r.epi_nome || '')}</td>
                   <td>${escapeHtml(r.categoria || '')}</td>
+                  <td>${escapeHtml(r.numero_ca || '')}</td>
                   <td>${escapeHtml(r.lote || '—')}</td>
                   <td>${escapeHtml(String(r.quantidade || 0))}</td>
                   <td>${escapeHtml(formatDate(r.data_entrega))}</td>
@@ -401,6 +391,7 @@ const RelatoriosPage = () => {
   const [filterSetor, setFilterSetor] = useState('');
   const [filterEpi, setFilterEpi] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('');
+  const [filterNumeroCa, setFilterNumeroCa] = useState('');
   const [filterFuncionario, setFilterFuncionario] = useState('');
   const [dataDe, setDataDe] = useState('');
   const [dataAte, setDataAte] = useState('');
@@ -445,6 +436,7 @@ const RelatoriosPage = () => {
     return relatorio.filter((item) => {
       if (filterSetor && item.setor !== filterSetor) return false;
       if (filterCategoria && item.categoria !== filterCategoria) return false;
+      if (filterNumeroCa && item.numero_ca !== filterNumeroCa) return false;
       if (filterFuncionario && item.funcionario_nome !== filterFuncionario) return false;
       if (filterEpi && String(item.epi_nome) !== String(filterEpi)) return false;
 
@@ -462,7 +454,7 @@ const RelatoriosPage = () => {
 
       return true;
     });
-  }, [relatorio, filterSetor, filterCategoria, filterFuncionario, filterEpi, dataDe, dataAte]);
+  }, [relatorio, filterSetor, filterCategoria, filterNumeroCa, filterFuncionario, filterEpi, dataDe, dataAte]);
 
   const entregasPorFunc = useMemo(() => {
     const map = new Map<string, number>();
@@ -605,10 +597,10 @@ const RelatoriosPage = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {relatorioFiltrado.map((e, index) => (
+                      {relatorioFiltrado.map((e) => (
                         <TableRow key={e.id}>
-                         <TableCell sx={{ fontWeight: 700, fontSize: '0.78rem', color: '#0B5ED7' }}>
-                            {protocoloRelatorio(e, index)}
+                          <TableCell sx={{ fontWeight: 700, fontSize: '0.78rem', color: '#0B5ED7' }}>
+                            {e.protocolo || '—'}
                           </TableCell>
                           <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{e.funcionario_nome}</TableCell>
                           <TableCell>{e.setor}</TableCell>

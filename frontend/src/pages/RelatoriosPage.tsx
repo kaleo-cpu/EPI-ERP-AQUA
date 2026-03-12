@@ -130,6 +130,7 @@ const buildExcelXml = (rows: EntregaRelatorio[]) => {
     'Funcionário',
     'Setor',
     'EPI',
+    'Número CA',
     'Categoria',
     'Lote',
     'Quantidade',
@@ -146,8 +147,8 @@ const buildExcelXml = (rows: EntregaRelatorio[]) => {
           <Cell><Data ss:Type="String">${escapeHtml(r.funcionario_nome || '')}</Data></Cell>
           <Cell><Data ss:Type="String">${escapeHtml(r.setor || '')}</Data></Cell>
           <Cell><Data ss:Type="String">${escapeHtml(r.epi_nome || '')}</Data></Cell>
-          <Cell><Data ss:Type="String">${escapeHtml(r.categoria || '')}</Data></Cell>
           <Cell><Data ss:Type="String">${escapeHtml(r.numero_ca || '')}</Data></Cell>
+          <Cell><Data ss:Type="String">${escapeHtml(r.categoria || '')}</Data></Cell>
           <Cell><Data ss:Type="String">${escapeHtml(r.lote || '')}</Data></Cell>
           <Cell><Data ss:Type="Number">${Number(r.quantidade || 0)}</Data></Cell>
           <Cell><Data ss:Type="String">${escapeHtml(formatDate(r.data_entrega))}</Data></Cell>
@@ -326,6 +327,7 @@ const buildPdfHtml = (
           <tr>
             <th>Protocolo</th>
             <th>EPI</th>
+            <th>Número CA</th>
             <th>Categoria</th>
             <th>Lote</th>
             <th>Qtd.</th>
@@ -339,12 +341,11 @@ const buildPdfHtml = (
                 <tr>
                   <td>${escapeHtml(r.protocolo || '')}</td>
                   <td>${escapeHtml(r.epi_nome || '')}</td>
-                  <td>${escapeHtml(r.categoria || '')}</td>
                   <td>${escapeHtml(r.numero_ca || '')}</td>
+                  <td>${escapeHtml(r.categoria || '')}</td>
                   <td>${escapeHtml(r.lote || '—')}</td>
                   <td>${escapeHtml(String(r.quantidade || 0))}</td>
                   <td>${escapeHtml(formatDate(r.data_entrega))}</td>
-                 
                 </tr>
               `
             )
@@ -391,7 +392,6 @@ const RelatoriosPage = () => {
   const [filterSetor, setFilterSetor] = useState('');
   const [filterEpi, setFilterEpi] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('');
-  const [filterNumeroCa, setFilterNumeroCa] = useState('');
   const [filterFuncionario, setFilterFuncionario] = useState('');
   const [dataDe, setDataDe] = useState('');
   const [dataAte, setDataAte] = useState('');
@@ -436,7 +436,6 @@ const RelatoriosPage = () => {
     return relatorio.filter((item) => {
       if (filterSetor && item.setor !== filterSetor) return false;
       if (filterCategoria && item.categoria !== filterCategoria) return false;
-      if (filterNumeroCa && item.numero_ca !== filterNumeroCa) return false;
       if (filterFuncionario && item.funcionario_nome !== filterFuncionario) return false;
       if (filterEpi && String(item.epi_nome) !== String(filterEpi)) return false;
 
@@ -454,7 +453,7 @@ const RelatoriosPage = () => {
 
       return true;
     });
-  }, [relatorio, filterSetor, filterCategoria, filterNumeroCa, filterFuncionario, filterEpi, dataDe, dataAte]);
+  }, [relatorio, filterSetor, filterCategoria, filterFuncionario, filterEpi, dataDe, dataAte]);
 
   const entregasPorFunc = useMemo(() => {
     const map = new Map<string, number>();
@@ -589,6 +588,7 @@ const RelatoriosPage = () => {
                         <TableCell>Funcionário</TableCell>
                         <TableCell>Setor</TableCell>
                         <TableCell>EPI</TableCell>
+                        <TableCell>Número CA</TableCell>
                         <TableCell>Categoria</TableCell>
                         <TableCell>Lote</TableCell>
                         <TableCell>Qtd</TableCell>
@@ -605,6 +605,7 @@ const RelatoriosPage = () => {
                           <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{e.funcionario_nome}</TableCell>
                           <TableCell>{e.setor}</TableCell>
                           <TableCell>{e.epi_nome}</TableCell>
+                          <TableCell>{e.numero_ca || '—'}</TableCell>
                           <TableCell>{e.categoria}</TableCell>
                           <TableCell sx={{ fontSize: '0.75rem' }}>{e.lote || '—'}</TableCell>
                           <TableCell>{e.quantidade}</TableCell>
@@ -676,6 +677,7 @@ const RelatoriosPage = () => {
                       <TableCell>Protocolo</TableCell>
                       <TableCell>Funcionário</TableCell>
                       <TableCell>EPI</TableCell>
+                      <TableCell>Número CA</TableCell>
                       <TableCell>Setor</TableCell>
                       <TableCell>Vencimento</TableCell>
                       <TableCell>Status</TableCell>
@@ -689,6 +691,7 @@ const RelatoriosPage = () => {
                           <TableCell sx={{ fontWeight: 700, color: '#0B5ED7' }}>{item.protocolo || '—'}</TableCell>
                           <TableCell>{item.funcionario_nome}</TableCell>
                           <TableCell>{item.epi_nome}</TableCell>
+                          <TableCell>{item.numero_ca || '—'}</TableCell>
                           <TableCell>{item.setor}</TableCell>
                           <TableCell>{formatDate(item.validade_ate || '')}</TableCell>
                           <TableCell>
@@ -716,6 +719,7 @@ const RelatoriosPage = () => {
                       <TableCell>Protocolo</TableCell>
                       <TableCell>Funcionário</TableCell>
                       <TableCell>EPI</TableCell>
+                      <TableCell>Número CA</TableCell>
                       <TableCell>Setor</TableCell>
                       <TableCell>Vencimento</TableCell>
                       <TableCell>Status</TableCell>
@@ -729,6 +733,7 @@ const RelatoriosPage = () => {
                           <TableCell sx={{ fontWeight: 700, color: '#0B5ED7' }}>{item.protocolo || '—'}</TableCell>
                           <TableCell>{item.funcionario_nome}</TableCell>
                           <TableCell>{item.epi_nome}</TableCell>
+                          <TableCell>{item.numero_ca || '—'}</TableCell>
                           <TableCell>{item.setor}</TableCell>
                           <TableCell>{formatDate(item.validade_ate || '')}</TableCell>
                           <TableCell>

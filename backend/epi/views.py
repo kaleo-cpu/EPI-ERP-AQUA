@@ -214,7 +214,7 @@ class EntregaEPIViewSet(viewsets.ModelViewSet):
         ws.title = "Entregas EPI"
 
         headers = [
-            "Funcionário", "Setor", "EPI", "Categoria", "Lote",
+            "Funcionário", "Setor", "EPI", "Número CA", "Categoria", "Lote",
             "Quantidade", "Data Entrega", "Validade Até",
         ]
         ws.append(headers)
@@ -232,6 +232,7 @@ class EntregaEPIViewSet(viewsets.ModelViewSet):
                 item.funcionario.nome if item.funcionario else "",
                 getattr(item.funcionario, "setor", "") or "",
                 item.epi.nome if item.epi else "",
+                item.epi.numero_ca if item.epi else "",
                 item.epi.categoria if item.epi else "",
                 item.lote or "",
                 item.quantidade,

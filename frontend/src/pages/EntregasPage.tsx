@@ -426,7 +426,7 @@ const EntregasPage = () => {
 
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ pt: 1 }}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Autocomplete
                 options={funcionarios.filter((f) => f.status === 'ativo')}
                 value={selectedFuncionario}
@@ -436,11 +436,11 @@ const EntregasPage = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 2 }}>
               <TextField fullWidth label="Setor" value={selectedFuncionario?.setor || ''} size="small" disabled />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 2.5 }}>
               <Autocomplete
                 options={epis}
                 value={selectedEpi}
@@ -450,7 +450,7 @@ const EntregasPage = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 2 }}>
               <TextField
                 fullWidth
                 select
@@ -468,7 +468,7 @@ const EntregasPage = () => {
               </TextField>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 1 }}>
               <TextField
                 fullWidth
                 label="Quantidade"

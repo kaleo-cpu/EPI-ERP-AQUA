@@ -355,14 +355,11 @@ export const editarFuncionario = (id: number, payload: Partial<FuncionarioInput>
     body: JSON.stringify(payload),
   });
 
-export const excluirFuncionarioComSenha = (
-  id: number,
-  senha: string
-) =>
-  request<{ detail?: string }>(`/funcionarios/${id} /excluir_com_senha/`, {
+export const excluirFuncionarioComSenha = (id: number, senha: string) =>
+  request<{ detail?: string }>(`/funcionarios/${id}/excluir_com_senha/`, {
     method: 'POST',
     body: JSON.stringify({ senha }),
-  });  
+  });
 
 // =====================
 // Usuários
@@ -397,7 +394,7 @@ export const registrarEntrega = (payload: EntregaInput) =>
 export const listarEntregasRelatorio = async (params?: {
   setor?: string;
   categoria?: string;
-  numero_ca?: string;  
+  numero_ca?: string;
   data_de?: string;
   data_ate?: string;
   funcionario_id?: number;
@@ -407,6 +404,7 @@ export const listarEntregasRelatorio = async (params?: {
 
   if (params?.setor) search.set('setor', params.setor);
   if (params?.categoria) search.set('categoria', params.categoria);
+  if (params?.numero_ca) search.set('numero_ca', params.numero_ca);
   if (params?.data_de) search.set('data_de', params.data_de);
   if (params?.data_ate) search.set('data_ate', params.data_ate);
   if (params?.funcionario_id) search.set('funcionario_id', String(params.funcionario_id));

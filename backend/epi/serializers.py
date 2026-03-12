@@ -119,6 +119,7 @@ class EntregaEPIRelatorioSerializer(serializers.ModelSerializer):
     setor = serializers.CharField(source="funcionario.setor", read_only=True)
     epi_nome = serializers.CharField(source="epi.nome", read_only=True)
     categoria = serializers.CharField(source="epi.categoria", read_only=True)
+    numero_ca = serializers.CharField(source="epi.numero_ca", read_only=True)
     validade_ate = serializers.SerializerMethodField()
     protocolo = serializers.CharField(read_only=True)
 
@@ -130,6 +131,7 @@ class EntregaEPIRelatorioSerializer(serializers.ModelSerializer):
             "setor",
             "epi_nome",
             "categoria",
+            "numero_ca",
             "lote",
             "quantidade",
             "data_entrega",

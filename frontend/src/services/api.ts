@@ -1,5 +1,5 @@
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://127.0.0.1:8000/api';
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '/api';
 
 const ACCESS_KEY = 'erp-epi-access';
 const REFRESH_KEY = 'erp-epi-refresh';
@@ -433,6 +433,7 @@ export const exportarEntregasRelatorio = async (params?: {
 
   if (params?.setor) search.set('setor', params.setor);
   if (params?.categoria) search.set('categoria', params.categoria);
+  if (params?.numero_ca) search.set('numero_ca', params.numero_ca);
   if (params?.data_de) search.set('data_de', params.data_de);
   if (params?.data_ate) search.set('data_ate', params.data_ate);
   if (params?.funcionario_id) search.set('funcionario_id', String(params.funcionario_id));

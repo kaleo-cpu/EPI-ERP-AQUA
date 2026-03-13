@@ -17,10 +17,12 @@ from .serializers import (
     EntregaEPIRelatorioSerializer, UsuarioSerializer
 )
 
+
 class UsuarioViewSet(ModelViewSet):
-    queryset = Usuario.objects.all().order_by('nome')
+    queryset = Usuario.objects.all().order_by("nome")
     serializer_class = UsuarioSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+
 
 class EPIViewSet(viewsets.ModelViewSet):
     queryset = EPI.objects.all().order_by("nome")
@@ -34,10 +36,12 @@ class EPIViewSet(viewsets.ModelViewSet):
         )
         return response.Response(list(qs))
 
+
 class EstoqueEPIViewSet(viewsets.ModelViewSet):
     queryset = EstoqueEPI.objects.all().order_by("-data_compra")
     serializer_class = EstoqueEPISerializer
     permission_classes = [permissions.IsAuthenticated]
+
 
 @decorators.api_view(["GET"])
 def alertas_minimo(request):
@@ -49,15 +53,21 @@ def alertas_minimo(request):
     )
     return response.Response(list(abaixo))
 
+
 class FuncionarioViewSet(viewsets.ModelViewSet):
     queryset = Funcionario.objects.all().order_by("nome")
     serializer_class = FuncionarioSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    @action(detail=True, methods=["post"], url_path="excluir-com-senha")
+    @action(detail=True, methods=["post"], url_path="excluir_com_senha")
     def excluir_com_senha(self, request, pk=None):
         funcionario = self.get_object()
-        admin_password = request.data.get("admin_password", "")
+        admin_password = (
+            request.data.get("senha")
+            or request.data.get("admin_password")
+            or request.data.get("password")
+            or ""
+        )
 
         if not admin_password:
             return Response(
@@ -66,8 +76,6 @@ class FuncionarioViewSet(viewsets.ModelViewSet):
             )
 
         user = request.user
-
-        # Só admin pode excluir
         is_admin = getattr(user, "perfil", None) == "admin" or user.is_superuser or user.is_staff
         if not is_admin:
             return Response(
@@ -75,7 +83,6 @@ class FuncionarioViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # Confirma a senha do admin logado
         auth_user = authenticate(username=user.username, password=admin_password)
         if not auth_user:
             return Response(
@@ -83,7 +90,6 @@ class FuncionarioViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Segurança: não excluir se existir histórico de entregas
         if funcionario.entregas.exists():
             return Response(
                 {"detail": "Este funcionário possui histórico de entregas e não pode ser excluído."},
@@ -98,13 +104,15 @@ class FuncionarioViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
 
+
 class MatrizFuncaoEPIViewSet(viewsets.ModelViewSet):
     queryset = MatrizFuncaoEPI.objects.all()
     serializer_class = MatrizFuncaoEPISerializer
     permission_classes = [permissions.IsAuthenticated]
 
+
 class EntregaEPIViewSet(viewsets.ModelViewSet):
-    queryset = EntregaEPI.objects.all().order_by("-data_entrega")
+    queryset = EntregaEPI.objects.select_related("funcionario", "epi").all().order_by("-data_entrega", "-id")
     serializer_class = EntregaEPISerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -154,11 +162,12 @@ class EntregaEPIViewSet(viewsets.ModelViewSet):
         qs = (
             EntregaEPI.objects.select_related("funcionario", "epi")
             .all()
-            .order_by("-data_entrega")
+            .order_by("-data_entrega", "-id")
         )
 
         setor = request.query_params.get("setor")
         categoria = request.query_params.get("categoria")
+        numero_ca = request.query_params.get("numero_ca")
         data_de = request.query_params.get("data_de")
         data_ate = request.query_params.get("data_ate")
         funcionario_id = request.query_params.get("funcionario_id")
@@ -168,14 +177,16 @@ class EntregaEPIViewSet(viewsets.ModelViewSet):
             qs = qs.filter(funcionario__setor__iexact=setor)
         if categoria:
             qs = qs.filter(epi__categoria=categoria)
+        if numero_ca:
+            qs = qs.filter(epi__numero_ca__icontains=numero_ca)
         if funcionario_id:
             qs = qs.filter(funcionario_id=funcionario_id)
         if epi_id:
             qs = qs.filter(epi_id=epi_id)
 
-        def parse_date(s):
+        def parse_date(value):
             try:
-                return datetime.strptime(s, "%Y-%m-%d").date()
+                return datetime.strptime(value, "%Y-%m-%d").date()
             except Exception:
                 return None
 
@@ -185,16 +196,17 @@ class EntregaEPIViewSet(viewsets.ModelViewSet):
             qs = qs.filter(data_entrega__date__gte=d0)
         if d1:
             qs = qs.filter(data_entrega__date__lte=d1)
+
         return qs
 
     @action(detail=False, methods=["get"])
     def relatorio(self, request):
         qs = self._filtrar_entregas(request)
         page = self.paginate_queryset(qs)
-        serializer = EntregaEPIRelatorioSerializer(page or qs, many=True)
+        serializer = EntregaEPIRelatorioSerializer(page if page is not None else qs, many=True)
         if page is not None:
             return self.get_paginated_response(serializer.data)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
     def exportar(self, request):
@@ -214,8 +226,16 @@ class EntregaEPIViewSet(viewsets.ModelViewSet):
         ws.title = "Entregas EPI"
 
         headers = [
-            "Funcionário", "Setor", "EPI", "Número CA", "Categoria", "Lote",
-            "Quantidade", "Data Entrega", "Validade Até",
+            "Protocolo",
+            "Funcionário",
+            "Setor",
+            "EPI",
+            "Número CA",
+            "Categoria",
+            "Lote",
+            "Quantidade",
+            "Data Entrega",
+            "Validade Até",
         ]
         ws.append(headers)
 
@@ -229,6 +249,7 @@ class EntregaEPIViewSet(viewsets.ModelViewSet):
                 validade_ate = ""
 
             ws.append([
+                item.protocolo or "",
                 item.funcionario.nome if item.funcionario else "",
                 getattr(item.funcionario, "setor", "") or "",
                 item.epi.nome if item.epi else "",
@@ -250,10 +271,12 @@ class EntregaEPIViewSet(viewsets.ModelViewSet):
         wb.save(resp)
         return resp
 
+
 class TrocaEPIViewSet(viewsets.ModelViewSet):
     queryset = TrocaEPI.objects.all().order_by("-data_solicitacao")
     serializer_class = TrocaEPISerializer
     permission_classes = [permissions.IsAuthenticated]
+
 
 @decorators.api_view(["GET"])
 def monitor_validade(request):
@@ -263,6 +286,7 @@ def monitor_validade(request):
         "funcionario__nome", "funcionario__setor", "epi__nome", "data_validade_prevista"
     ).order_by("data_validade_prevista")
     return response.Response(list(qs))
+
 
 @decorators.api_view(["GET"])
 def kpis(request):
